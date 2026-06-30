@@ -540,6 +540,11 @@
     // Ensure defaults are always saved so API calls work without opening settings
     if (!localStorage.getItem('gemini_key')) localStorage.setItem('gemini_key', DEFAULT_GEMINI_KEY);
     if (!localStorage.getItem('groq_key')) localStorage.setItem('groq_key', DEFAULT_GROQ_KEY);
+    if (!localStorage.getItem('system_prompt')) {
+      var defaultSys = 'You are a personal AI assistant for Tahsin. Be direct, concise, and conversational. No filler phrases like "Certainly!", "Great question!", or "As an AI...". Never disclaim about lacking feelings unless directly asked. Answer like a knowledgeable friend. For casual questions like "how are you", give a short natural reply. Get straight to the point.';
+      localStorage.setItem('system_prompt', defaultSys);
+      sys = defaultSys;
+    }
     if (gk) document.getElementById('gemini-key').value = gk;
     if (grk) document.getElementById('groq-key').value = grk;
     if (sys) document.getElementById('system-prompt').value = sys;
@@ -561,7 +566,7 @@
     var sys = document.getElementById('system-prompt').value.trim();
     if (gk) localStorage.setItem('gemini_key', gk);
     if (grk) localStorage.setItem('groq_key', grk);
-    localStorage.setItem('system_prompt', sys || 'You are a helpful assistant.');
+    localStorage.setItem('system_prompt', sys || 'You are a personal AI assistant for Tahsin. Be direct, concise, and conversational. No filler phrases like "Certainly!", "Great question!", or "As an AI...". Never disclaim about lacking feelings unless directly asked. Answer like a knowledgeable friend. Get straight to the point.');
     document.getElementById('settings-panel').classList.remove('open');
     showToast('✓ Keys saved');
   }
