@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Personal AI Assistant using Gemini and Groq APIs" />
+  <title>My AI Assistant</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg: #0d0d14;
+      --surface: #16161f;
+      --surface2: #1e1e2e;
+      --border: #2a2a3d;
+      --accent: #7c6bff;
+      --accent2: #00d4aa;
+      --text: #e8e8f0;
+      --text-dim: #888899;
+      --user-bubble: #1a1a2e;
+      --ai-bubble: #12121c;
+      --danger: #ff6b6b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      height: 100vh;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    #header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      -webkit-justify-content: space-between;
+      justify-content: space-between;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    #header-left {
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      -webkit-justify-content: center;
+      justify-content: center;
+      font-size: 16px;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+
+    #header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #header h1 span {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: block;
+      font-weight: 400;
+    }
+
+    #settings-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 7px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    /* ── Settings Panel ── */
+    #settings-panel {
+      display: none;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+      animation: slideDown 0.2s ease;
+    }
+
+    #settings-panel.open { display: block; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .settings-row {
+      display: -webkit-flex;
+      display: flex;
+      gap: 8px;
+      -webkit-align-items: center;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .settings-row:last-child { margin-bottom: 0; }
+
+    .settings-row label {
+      font-size: 12px;
+      color: var(--text-dim);
+      width: 80px;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+
+    .settings-row input,
+    .settings-row select {
+      -webkit-flex: 1;
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .settings-row input:focus,
+    .settings-row select:focus {
+      border-color: var(--accent);
+    }
+
+    .settings-row input[type="password"] {
+      letter-spacing: 2px;
+    }
+
+    #save-settings {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 9px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    /* ── Model selector bar ── */
+    #model-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
+      display: -webkit-flex;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+
+    #model-bar::-webkit-scrollbar { display: none; }
+
+    .model-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .model-chip.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── Messages ── */
+    #messages {
+      -webkit-flex: 1;
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-direction: column;
+      flex-direction: column;
+      gap: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #messages::-webkit-scrollbar { width: 3px; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .msg {
+      max-width: 88%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+
+    .msg.user {
+      background: var(--user-bubble);
+      border: 1px solid var(--border);
+      -webkit-align-self: flex-end;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.ai {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      -webkit-align-self: flex-start;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.ai .model-tag {
+      font-size: 10px;
+      color: var(--accent);
+      margin-bottom: 5px;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .msg.error {
+      background: rgba(255,107,107,0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+      -webkit-align-self: flex-start;
+      align-self: flex-start;
+      font-size: 13px;
+    }
+
+    .msg.typing {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      -webkit-align-self: flex-start;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    .dots {
+      display: -webkit-inline-flex;
+      display: inline-flex;
+      gap: 4px;
+      -webkit-align-items: center;
+      align-items: center;
+      height: 18px;
+    }
+
+    .dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 1.2s infinite;
+    }
+
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Markdown-like rendering */
+    .msg.ai code {
+      background: rgba(124,107,255,0.15);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    .msg.ai pre {
+      background: #0a0a12;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      overflow-x: auto;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .msg.ai pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    .msg.ai strong { color: #c5b8ff; }
+    .msg.ai em { color: var(--accent2); font-style: italic; }
+
+    #empty-state {
+      text-align: center;
+      color: var(--text-dim);
+      margin: auto;
+      padding: 20px;
+    }
+
+    #empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    #empty-state h2 {
+      font-size: 18px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    #empty-state p {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── Input ── */
+    #input-area {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      display: -webkit-flex;
+      display: flex;
+      gap: 8px;
+      -webkit-align-items: flex-end;
+      align-items: flex-end;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+
+    #user-input {
+      -webkit-flex: 1;
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      min-height: 42px;
+      max-height: 120px;
+      line-height: 1.4;
+      font-family: inherit;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #user-input:focus { border-color: var(--accent); }
+    #user-input::placeholder { color: var(--text-dim); }
+
+    #send-btn {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 18px;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      -webkit-justify-content: center;
+      justify-content: center;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    #send-btn:active { transform: scale(0.93); background: #6a5aed; }
+    #send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    #clear-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-align-items: center;
+      align-items: center;
+      -webkit-justify-content: center;
+      justify-content: center;
+      -webkit-flex-shrink: 0;
+      flex-shrink: 0;
+    }
+
+    #clear-btn:active { background: rgba(255,107,107,0.1); border-color: var(--danger); color: var(--danger); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 999;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <div id="header-left">
+    <div id="logo">✦</div>
+    <h1>My AI
+      <span id="active-model-name">Select a model</span>
+    </h1>
+  </div>
+  <button id="settings-btn" onclick="toggleSettings()">⚙ Keys</button>
+</div>
+
+<!-- Settings Panel -->
+<div id="settings-panel">
+  <div class="settings-row">
+    <label>Gemini Key</label>
+    <input type="password" id="gemini-key" placeholder="AIza..." autocomplete="off" />
+  </div>
+  <div class="settings-row">
+    <label>Groq Key</label>
+    <input type="password" id="groq-key" placeholder="gsk_..." autocomplete="off" />
+  </div>
+  <div class="settings-row">
+    <label>System</label>
+    <input type="text" id="system-prompt" placeholder="You are a helpful assistant." />
+  </div>
+  <button id="save-settings" onclick="saveSettings()">💾 Save Keys</button>
+</div>
+
+<!-- Model Chips -->
+<div id="model-bar">
+  <div class="model-chip active" data-provider="gemini" data-model="gemini-2.0-flash" onclick="selectModel(this)">Gemini Flash</div>
+  <div class="model-chip" data-provider="gemini" data-model="gemini-1.5-flash" onclick="selectModel(this)">Gemini 1.5</div>
+  <div class="model-chip" data-provider="gemini" data-model="gemini-1.5-pro" onclick="selectModel(this)">Gemini Pro</div>
+  <div class="model-chip" data-provider="groq" data-model="llama-3.3-70b-versatile" onclick="selectModel(this)">Llama 3.3 70B</div>
+  <div class="model-chip" data-provider="groq" data-model="llama-3.1-8b-instant" onclick="selectModel(this)">Llama 3.1 8B</div>
+  <div class="model-chip" data-provider="groq" data-model="mixtral-8x7b-32768" onclick="selectModel(this)">Mixtral</div>
+  <div class="model-chip" data-provider="groq" data-model="gemma2-9b-it" onclick="selectModel(this)">Gemma2</div>
+  <div class="model-chip" data-provider="groq" data-model="deepseek-r1-distill-llama-70b" onclick="selectModel(this)">DeepSeek R1</div>
+</div>
+
+<!-- Messages -->
+<div id="messages">
+  <div id="empty-state">
+    <div class="icon">✦</div>
+    <h2>My AI Assistant</h2>
+    <p>Select a model above, add your API keys via ⚙, then start chatting.</p>
+  </div>
+</div>
+
+<!-- Input -->
+<div id="input-area">
+  <button id="clear-btn" onclick="clearChat()" title="Clear chat">🗑</button>
+  <textarea id="user-input" placeholder="Type a message..." rows="1"></textarea>
+  <button id="send-btn" onclick="sendMessage()" id="send-btn">➤</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── State ──
+  var currentProvider = 'gemini';
+  var currentModel = 'gemini-2.0-flash';
+  var conversation = []; // {role, content}
+  var isLoading = false;
+
+  // ── Load saved settings ──
+  (function init() {
+    var gk = localStorage.getItem('gemini_key');
+    var grk = localStorage.getItem('groq_key');
+    var sys = localStorage.getItem('system_prompt');
+    if (gk) document.getElementById('gemini-key').value = gk;
+    if (grk) document.getElementById('groq-key').value = grk;
+    if (sys) document.getElementById('system-prompt').value = sys;
+  })();
+
+  // ── Settings ──
+  function toggleSettings() {
+    var panel = document.getElementById('settings-panel');
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+    } else {
+      panel.classList.add('open');
+    }
+  }
+
+  function saveSettings() {
+    var gk = document.getElementById('gemini-key').value.trim();
+    var grk = document.getElementById('groq-key').value.trim();
+    var sys = document.getElementById('system-prompt').value.trim();
+    if (gk) localStorage.setItem('gemini_key', gk);
+    if (grk) localStorage.setItem('groq_key', grk);
+    localStorage.setItem('system_prompt', sys || 'You are a helpful assistant.');
+    document.getElementById('settings-panel').classList.remove('open');
+    showToast('✓ Keys saved');
+  }
+
+  // ── Model selection ──
+  function selectModel(el) {
+    var chips = document.querySelectorAll('.model-chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.remove('active');
+    }
+    el.classList.add('active');
+    currentProvider = el.getAttribute('data-provider');
+    currentModel = el.getAttribute('data-model');
+    document.getElementById('active-model-name').textContent = el.textContent;
+  }
+
+  // ── Auto-resize textarea ──
+  var textarea = document.getElementById('user-input');
+  textarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  textarea.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ── Messages ──
+  function appendMsg(role, content, modelName) {
+    var empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+
+    var div = document.createElement('div');
+    div.className = 'msg ' + role;
+
+    if (role === 'ai' && modelName) {
+      var tag = document.createElement('span');
+      tag.className = 'model-tag';
+      tag.textContent = modelName;
+      div.appendChild(tag);
+    }
+
+    var p = document.createElement('div');
+    p.innerHTML = formatText(content);
+    div.appendChild(p);
+
+    document.getElementById('messages').appendChild(div);
+    scrollBottom();
+    return div;
+  }
+
+  function appendTyping() {
+    var empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+
+    var div = document.createElement('div');
+    div.className = 'msg typing';
+    div.id = 'typing-indicator';
+    div.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+    document.getElementById('messages').appendChild(div);
+    scrollBottom();
+    return div;
+  }
+
+  function removeTyping() {
+    var t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  function scrollBottom() {
+    var m = document.getElementById('messages');
+    m.scrollTop = m.scrollHeight;
+  }
+
+  function clearChat() {
+    conversation = [];
+    var m = document.getElementById('messages');
+    m.innerHTML = '<div id="empty-state"><div class="icon">✦</div><h2>My AI Assistant</h2><p>Select a model above, add your API keys via ⚙, then start chatting.</p></div>';
+    showToast('Chat cleared');
+  }
+
+  // ── Simple markdown-like formatter ──
+  function formatText(text) {
+    // escape HTML first
+    text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // code blocks
+    text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    // inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // bold
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // italic
+    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    // newlines
+    text = text.replace(/\n/g, '<br>');
+    return text;
+  }
+
+  // ── Send ──
+  function sendMessage() {
+    if (isLoading) return;
+    var input = document.getElementById('user-input');
+    var text = input.value.trim();
+    if (!text) return;
+
+    appendMsg('user', text, null);
+    input.value = '';
+    input.style.height = 'auto';
+
+    conversation.push({ role: 'user', content: text });
+
+    if (currentProvider === 'gemini') {
+      callGemini();
+    } else {
+      callGroq();
+    }
+  }
+
+  // ── Gemini API ──
+  function callGemini() {
+    var apiKey = localStorage.getItem('gemini_key');
+    if (!apiKey) {
+      showError('No Gemini API key set. Tap ⚙ to add it.');
+      return;
+    }
+
+    isLoading = true;
+    setInputDisabled(true);
+    appendTyping();
+
+    var sys = localStorage.getItem('system_prompt') || 'You are a helpful assistant.';
+
+    // Build Gemini contents array
+    var contents = [];
+    for (var i = 0; i < conversation.length; i++) {
+      var msg = conversation[i];
+      contents.push({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      });
+    }
+
+    var body = JSON.stringify({
+      system_instruction: { parts: [{ text: sys }] },
+      contents: contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+    });
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + currentModel + ':generateContent?key=' + apiKey;
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState !== 4) return;
+      removeTyping();
+      isLoading = false;
+      setInputDisabled(false);
+
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          var reply = data.candidates[0].content.parts[0].text;
+          conversation.push({ role: 'assistant', content: reply });
+          appendMsg('ai', reply, currentModel);
+        } catch (e) {
+          showError('Parse error: ' + e.message);
+        }
+      } else {
+        try {
+          var err = JSON.parse(xhr.responseText);
+          showError('Gemini error: ' + (err.error ? err.error.message : xhr.status));
+        } catch(e) {
+          showError('Gemini error ' + xhr.status);
+        }
+      }
+    };
+
+    xhr.onerror = function() {
+      removeTyping();
+      isLoading = false;
+      setInputDisabled(false);
+      showError('Network error. Check your internet connection.');
+    };
+
+    xhr.send(body);
+  }
+
+  // ── Groq API ──
+  function callGroq() {
+    var apiKey = localStorage.getItem('groq_key');
+    if (!apiKey) {
+      showError('No Groq API key set. Tap ⚙ to add it.');
+      return;
+    }
+
+    isLoading = true;
+    setInputDisabled(true);
+    appendTyping();
+
+    var sys = localStorage.getItem('system_prompt') || 'You are a helpful assistant.';
+
+    var messages = [{ role: 'system', content: sys }];
+    for (var i = 0; i < conversation.length; i++) {
+      var msg = conversation[i];
+      messages.push({ role: msg.role === 'assistant' ? 'assistant' : msg.role, content: msg.content });
+    }
+
+    var body = JSON.stringify({
+      model: currentModel,
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 8192
+    });
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://api.groq.com/openai/v1/chat/completions', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
+
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState !== 4) return;
+      removeTyping();
+      isLoading = false;
+      setInputDisabled(false);
+
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          var reply = data.choices[0].message.content;
+          conversation.push({ role: 'assistant', content: reply });
+          appendMsg('ai', reply, currentModel);
+        } catch (e) {
+          showError('Parse error: ' + e.message);
+        }
+      } else {
+        try {
+          var err = JSON.parse(xhr.responseText);
+          showError('Groq error: ' + (err.error ? err.error.message : xhr.status));
+        } catch(e) {
+          showError('Groq error ' + xhr.status);
+        }
+      }
+    };
+
+    xhr.onerror = function() {
+      removeTyping();
+      isLoading = false;
+      setInputDisabled(false);
+      showError('Network error. Check your internet connection.');
+    };
+
+    xhr.send(body);
+  }
+
+  // ── Helpers ──
+  function showError(msg) {
+    var div = document.createElement('div');
+    div.className = 'msg error';
+    div.textContent = '⚠ ' + msg;
+    document.getElementById('messages').appendChild(div);
+    scrollBottom();
+  }
+
+  function setInputDisabled(val) {
+    document.getElementById('user-input').disabled = val;
+    document.getElementById('send-btn').disabled = val;
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2000);
+  }
+</script>
+</body>
+</html>
